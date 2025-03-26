@@ -4,6 +4,7 @@ from torch import optim
 from models.backbone import ViTBackbone
 from models.sae import SparseAutoencoder
 from models.classifier import ClassifierHead
+from models.csae import CSAE
 from dataloader import dataloaders
 
 def train(
@@ -24,11 +25,25 @@ def train(
     divice_name = "cpu"
   device = torch.device(device_name)
 
-  backbone = ViTBackbone(model_name = vit_model).to(device)
-  sae = SparseAutoencoder(input_dim=backbone.hidden_dim, latent_dim=latent_dim, topk=topk).to(device)
-  classifier = ClassifierHead(input_dim = backbone.hidden_dim, num_classes=100).to(device)
-
-  backbone.eval()
+  model = CSAE(vit_model=vit_model, latent_dim=latent_dim, topk=topk, num_classes=100, num_parallel_layers=5)
+  model.to(device)
+  model.backbone.eval()
 
   optimizer = optim.Adam(list(sae.parameters()) + list(classifier.parameters()), lr = lr)
-  task_loaders = dataloaders(batch_size=batch_size, num_tasks=num_tasks)
+  train_loaders, test_loaders = dataloaders(batch_size=batch_size, num_tasks=num_tasks)
+
+  for task_id, (train_loader, test_loader) in enumerate(zip(train_loaders, test_loaders)):
+    print(f"\n=================Task {task_id}==================================")
+    model.sae.train()
+    model.classifier.train()
+    loss = 0.0
+
+    for epoch in range(epochs):
+      for images, labels in train_loader:
+        images, labels = images.to(device), labels.to(device)
+        optimizer.zero_grad()
+        logits, latent_list = model(images)
+        loss_ce = F.cross_entropy(logits, labels)
+        loss_l1 = torch.mean(torch.abs(latent_list[-1])
+                             )
+
