@@ -29,21 +29,44 @@ def train(
   model.to(device)
   model.backbone.eval()
 
-  optimizer = optim.Adam(list(sae.parameters()) + list(classifier.parameters()), lr = lr)
+  optimizer = optim.Adam(list(model.sae.parameters()) + list(model.classifier.parameters()), lr = lr)
   train_loaders, test_loaders = dataloaders(batch_size=batch_size, num_tasks=num_tasks)
 
   for task_id, (train_loader, test_loader) in enumerate(zip(train_loaders, test_loaders)):
     print(f"\n=================Task {task_id}==================================")
     model.sae.train()
     model.classifier.train()
-    loss = 0.0
+    total_loss = 0.0
 
     for epoch in range(epochs):
       for images, labels in train_loader:
         images, labels = images.to(device), labels.to(device)
         optimizer.zero_grad()
         logits, latent_list = model(images)
-        loss_ce = F.cross_entropy(logits, labels)
-        loss_l1 = torch.mean(torch.abs(latent_list[-1])
-                             )
+        ce_loss = F.cross_entropy(logits, labels)
+        l1_loss = torch.mean(torch.abs(latent_list[-1]))
+        loss = ce_loss + l1_loss
+        loss.backward()
+        optimizer.step()
+        total_loss += loss.item()
+      print(f'Task {task_id} Epoch {epoch+1}/{epochs} loss : {total_loss/len(train_loader):.4f}')
+      total_loss = 0.0
 
+    checkpoint = {"csae" : model.state_dict()}
+    torch.save(checkpoint, f"checkpoint_task{task_id}.pth")
+
+    model.sae.eval()
+    model.classifier.eval()
+    correct, total = 0, 0
+    with torch.no_grad():
+      for images, labels in test_loader:
+        images, labels = images.to(device), labels.to(device)
+        logits, _ = model(images)
+        preds = logits.argmax(dim=1)
+        correct += (preds == labels).sum().item()
+        total += labels.size(0)
+    acc = 100.0 * correct /total
+    print(f"Task {task_id} acc : {acc:.2f}%")
+
+if __name__ == "__main__":
+  train()
