@@ -2,11 +2,11 @@ import torch
 import torch.nn as nn
 
 class SparseAutoencoder(nn.Module):
-  def __init__(self, input_dim = 768, latent_dim = 256, toopk = 50):
+  def __init__(self, input_dim = 768, latent_dim = 256, topk = 50):
     super().__init__()
     self.input_dim = input_dim
     self.latent_dim = latent_dim
-    self.topk = toopk
+    self.topk = topk
     self.encoder = nn.Linear(input_dim, latent_dim)
     self.decoder = nn.Linear(latent_dim, input_dim)
 
