@@ -11,7 +11,7 @@ class CSAE(nn.Module):
       vit_model = "google/vit-base-patch16-224-in21k",
       latent_dim = 256,
       topk = 50,
-      num_classes = 100,
+      num_classes = 10,
       num_parallel_layers = 4):
     super().__init__()
     self.backbone = ViTBackbone(model_name=vit_model)
