@@ -7,8 +7,8 @@ class SaeWrapper(nn.Module):
     self.layer = vit_layer
     self.sae = sae_module
 
-  def forward(self, x):
+  def forward(self, x, prev_weight = None, task_id = 0):
     x = self.layer(x)[0]
-    mod, latent = self.sae
+    mod, latent, current_weight = self.sae(x, prev_weight, task_id)
 
-    return x+mod, latent
+    return x+0.1 * mod, latent, current_weight
