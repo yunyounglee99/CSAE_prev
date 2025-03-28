@@ -20,7 +20,7 @@ class CSAE(nn.Module):
     self.num_parallel_layers = num_parallel_layers  
     self.classifier = ClassifierHead(input_dim=self.hidden_dim, num_classes=num_classes)
 
-  def forward(self, images, prev_weight = None):
+  def forward(self, images, prev_weight = None, task_id=0):
     x = self.backbone(images)
     latent_list = []
 
@@ -29,7 +29,7 @@ class CSAE(nn.Module):
     for i in range(self.num_parallel_layers):
       layer = self.backbone.vit.encoder.layer[i]
       wrapper = SaeWrapper(layer, self.sae)
-      x, latent, current_weight = wrapper(x, prev_weight = current_weight)
+      x, latent, current_weight = wrapper(x, prev_weight = current_weight, task_id = task_id)
       latent_list.append(latent)
 
     for i in range(self.num_parallel_layers, len(self.backbone.vit.encoder.layer)):
